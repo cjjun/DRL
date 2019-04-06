@@ -1,12 +1,8 @@
+import time
+
 """
 Original data that read from  CSV
 """
-
-Global_Farms = []
-Global_Servers = []
-Global_VMs = []
-Global_Jobs = []
-Global_Tasks = []
 
 class MachineAttribute():
     def __init__(self):
@@ -103,6 +99,7 @@ TASK_STATUS_WAITING = 0
 TASK_STATUS_SUSPENDED = 1
 TASK_STATUS_RUNNING = 2 
 TASK_STATUS_FINISHED = 3
+TASK_STATUS_ABORT = 4
 
 class Farm:
     def __init__(self):
@@ -171,7 +168,7 @@ class Server():
 class VM():
     def __init__(self):
         self.server = None
-        self.jobs = []
+        self.tasks = []
 
         self.outedges = []
         self.inedges = []
@@ -201,9 +198,11 @@ class VM():
         self.Current_CPU = 0
         self.Current_Memory = 0
 
-        for job in self.jobs:
-            self.Current_CPU += job.Current_CPU
-            self.Current_Memory += job.Current_Memory
+        for task in self.tasks:
+            if task.status == TASK_STATUS_RUNNING:
+                self.Current_CPU += task.Request_CPU
+            if task.status != TASK_STATUS_FINISHED:
+                self.Current_Memory += task.Request_Memory
 
     def Update_from_child(self):
         if not self.server and self.should_update == 1:
@@ -221,51 +220,69 @@ class VM():
 
 class Job():
     def __init__(self):
-        self.VM = None 
+        # self.VM = None 
         self.tasks = []
     
         self.ID = None
 
         self.Request_CPU = None 
         self.Request_Memory = None 
+        self.Finish_flag = 0
 
-        self.should_update = 0
 
     def Update_from_child(self):
-        if not self.VM and self.should_update == 1:
-            self.should_update = 0
-            # self.VM.should_update = 1
-            old = (self.Request_CPU,self.Request_Memory)
+        if self.Finish_flag == 1:
+            return
 
-            self.Request_CPU = 0
-            self.Request_Memory = 0
+        self.Request_CPU = 0
+        self.Request_Memory = 0
 
-            for task in self.tasks:
-                if task.status == TASK_STATUS_RUNNING:
-                    self.Request_CPU += task.Request_CPU
-                    self.Request_Memory += task.Request_Memory
+        flg = 1
 
-            self.VM.incre[0] += self.Request_CPU - old[0]
-            self.VM.incre[1] += self.Request_Memory - old[1]
-            self.VM.should_update = 1
-            
+        for task in self.tasks:
+            if task.status == TASK_STATUS_RUNNING:
+                self.Request_CPU += task.Request_CPU
+                self.Request_Memory += task.Request_Memory
+                flg = 0
+        self.Finish_flag = flg   
 
 class Task():
     def __init__(self):
         self.job = None 
+        self.VM = None
         
         # Tuple in the form (id,data_bandwidth)
         self.outedges = []
         self.inedges = []
 
         self.ID = None
-        self.status = None 
+        self.status = None          # Status: Waitting, suspended, Finished, Running
 
         self.Request_CPU = None 
         self.Request_Memory = None 
         self.VM_type = None 
 
-        # priority
-        self.Prr = None
-        self.DDL = None
         
+        self.Prr = None  # priority
+        self.DDL = None
+        self.Start_time = None
+    
+    def Update_abandon(self):
+        # if self.status != TASK_STATUS_ABORT time.time() >= self.DDL:
+        # self.status = TASK_STATUS_FINISHED
+
+        self.VM.incre[0] -= self.Request_CPU
+        self.VM.incre[1] -= self.Request_Memory
+        self.VM.should_update = 1
+
+    
+    def Update_resume(self):
+        self.VM.incre[0] += self.Request_CPU
+        self.VM.incre[1] += self.Request_Memory
+        self.VM.should_update = 1
+    
+    def Select_Hour(self,h):
+        self.Start_time = h 
+    
+    def Select_Minute(self,m):
+        self.Start_time = self.Start_time * 60 + m
