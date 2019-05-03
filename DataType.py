@@ -164,6 +164,7 @@ class Server():
 
     def Update_Unknown_Info(self):
         self.Ur = self.Current_CPU / self.Capacity_CPU
+    
 
 class VM():
     def __init__(self):
@@ -184,7 +185,7 @@ class VM():
 
         self.has_initialized = 0
         self.should_update = 0
-        self.incre = (0,0)
+        self.incre = [0,0]
 
     def Update():
         if not self.has_initialized:
@@ -217,6 +218,12 @@ class VM():
             self.server.incre[1] += self.incre[1]
             self.server.should_update = 1
             self.incre = (0,0)
+    
+    def Push_up(self,incre):
+        pa = self.server
+
+        pa.incre[0] += incre[0]
+        pa.incre[1] += incre[1]
 
 class Job():
     def __init__(self):
@@ -265,7 +272,7 @@ class Task():
         
         self.Prr = None  # priority
         self.DDL = None
-        self.Start_time = None
+        self.Start_time = {year:'2019',mon:'3',day:'12',hour:'4',minu:'23'}
     
     def Update_abandon(self):
         # if self.status != TASK_STATUS_ABORT time.time() >= self.DDL:
@@ -286,3 +293,19 @@ class Task():
     
     def Select_Minute(self,m):
         self.Start_time = self.Start_time * 60 + m
+
+    def Push_up(self):
+        incre = [ self.Request_CPU , self.Request_Memory ]
+        pa = self.VM
+
+        pa.incre[0] += incre[0]
+        pa.incre[1] += incre[1]
+        pa.Push_up(incre)
+
+    def Push_up_for_all(self,incre):
+        pa = self.job
+
+        for job in pa.job:
+            vm = job.pa 
+            vm.Push_up(incre)
+    

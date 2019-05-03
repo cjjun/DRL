@@ -62,22 +62,30 @@ class Agent():
         VM_pointer = self.Pointer.VMs 
         assert( id < len( VM_pointer ) )
         self.Pointer = VM_pointer[id]
+        self.Assign_task()
         
-        # if not task_que.empty():
-        #     task = self.task_que.get()
+
+    def Start_task(self,task):
+        VM = self.Pointer
+        VM.tasks.append( task )
+        task.VM = VM 
+        task.Push_up()
 
     
     def Select_hour(self,h):
         """
         Select the task hour
         """
-        pass 
+        task = self.VM.tasks[-1]
+        task.Start_time ['hour'] = h
     
     def Select_minute(self,m):
         """
         Select the task minute
         """
-        pass 
+        task = self.VM.tasks[-1]
+        task.Start_time ['minu'] = m 
+        
     def Get_Ser(self):
         ser = self.Pointer.server 
         ser.Update()
@@ -96,16 +104,13 @@ class Agent():
         """
 
         # Step 1, test if server could satisfy constraint
-
-        if task.Request_CPU + server.Current_CPU > server.Capacity_CPU 
-            or task.request_Memory + server.Current_Memory > server.Capacity_Memory:
+        if task.Request_CPU + server.Current_CPU > server.Capacity_CPU or task.request_Memory + server.Current_Memory > server.Capacity_Memory:
             return False
         
         # Step 2, find out if any VM satisfies the type and resource constraint
         for vm in server.VMs:
             if vm.type == task.VM_type:
-                if task.Request_CPU + vm.Current_CPU > vm.Capacity_CPU or 
-                    task.Request_Memory + vm.Current_Memory > vm.Capacity_Memory:
+                if task.Request_CPU + vm.Current_CPU > vm.Capacity_CPU or task.Request_Memory + vm.Current_Memory > vm.Capacity_Memory:
                     return False
         return True
 
